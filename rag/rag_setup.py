@@ -32,7 +32,7 @@ class MyCustomHandler(BaseCallbackHandler):
         print(f"LLM Formated Prompt: \n {prompts}")
 
 
-model = Ollama(
+LLM = Ollama(
     model="llama2", callback_manager=CallbackManager([MyCustomHandler()]))
 
 output_parser = StrOutputParser()
@@ -47,18 +47,33 @@ def mongo_connection():
     return collection
 
 
-def rag_chain(custom_projection=None):
+def vector_search_chain(custom_projection=None, k=4):
     collection = mongo_connection()
     vectorstore = MongoDBAtlasProjectionVectorStore(
         collection, embedding_model, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
 
     retriever = MongoDBAtlasProjectionRetriever(movie_vectorstore=vectorstore, search_kwargs={
-        "custom_projection": custom_projection})
+        "custom_projection": custom_projection, "k": k})
 
     setup_and_retrieval = RunnableParallel(
         {"context": retriever, "question": RunnablePassthrough()}
     )
 
     chain = setup_and_retrieval
+
+    return chain
+def rag_chain(custom_projection=None, k=4):
+    collection = mongo_connection()
+    vectorstore = MongoDBAtlasProjectionVectorStore(
+        collection, embedding_model, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
+
+    retriever = MongoDBAtlasProjectionRetriever(movie_vectorstore=vectorstore, search_kwargs={
+        "custom_projection": custom_projection, "k": k})
+
+    setup_and_retrieval = RunnableParallel(
+        {"context": retriever, "question": RunnablePassthrough()}
+    )
+
+    chain = setup_and_retrieval | PROMPT | LLM | output_parser
 
     return chain
