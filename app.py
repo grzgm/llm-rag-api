@@ -2,7 +2,7 @@ import os
 import json
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
-from rag.rag_setup import vector_search_chain, rag_chain, self_querying_rag_chain
+from rag.rag_setup import vector_search_chain, rag_chain, self_querying_vector_search_chain
 
 load_dotenv()
 
@@ -54,21 +54,17 @@ def rag():
 
     return jsonify(response)
 
-@app.route("/sq-rag")
-def self_querying_rag():
+@app.route("/sq-vector-search")
+def self_querying_vector_search():
     query = request.args.get('query')
-    custom_projection = request.args.get('projection')
-    docs_num = int(request.args.get('docs_num')) if request.args.get('docs_num') else 3
 
-    if not custom_projection:
-        custom_projection = {'$project': {
-            '_id': 0,
-            os.getenv("EMBEDDING_KEY"): 0}}
-    else:
-        custom_projection = json.loads(custom_projection)
+    chain = self_querying_vector_search_chain()
 
-    chain = self_querying_rag_chain()
+    docs = chain.invoke(query)
 
-    response = chain.invoke(query)
+    res = []
+    for doc in docs:
+        doc.metadata.pop('_id', None)
+        res.append(doc.to_json())
 
-    return jsonify(response)
+    return jsonify(res)

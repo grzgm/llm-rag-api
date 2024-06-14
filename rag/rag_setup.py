@@ -19,7 +19,6 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 from langchain_community.llms.ollama import Ollama
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain_core.documents import Document
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
@@ -85,10 +84,10 @@ def rag_chain(custom_projection=None, k=4):
     return chain
 
 
-def self_querying_rag_chain():
+def self_querying_vector_search_chain():
     collection = mongo_connection()
     vectorstore = MongoDBAtlasVectorSearch(collection,
-    embedding_model, index_name=os.getenv("INDEX_NAME"), text_key="fullplot")
+                                           embedding_model, index_name=os.getenv("INDEX_NAME"), text_key="title")
 
     metadata_field_info = [
         AttributeInfo(
@@ -97,7 +96,12 @@ def self_querying_rag_chain():
             type="integer",
         ),
         AttributeInfo(
-            name="rating", description="A 1-10 rating for the movie", type="integer"
+            name="imdb.rating", description="A 1-10 rating for the movie", type="integer"
+        ),
+        AttributeInfo(
+            name="genres",
+            description="The genres of the movie. One of ['Science fiction', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Action', 'Animated']",
+            type="string",
         ),
     ]
 
@@ -106,7 +110,7 @@ def self_querying_rag_chain():
         LLM,
         vectorstore,
         document_content_description,
-        metadata_field_info,
+        metadata_field_info
     )
 
     return retriever
