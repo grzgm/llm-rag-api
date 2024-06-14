@@ -19,6 +19,10 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 from langchain_community.llms.ollama import Ollama
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain_core.documents import Document
+from langchain_community.vectorstores import MongoDBAtlasVectorSearch
+from langchain.chains.query_constructor.base import AttributeInfo
+from langchain.retrievers.self_query.base import SelfQueryRetriever
 from rag.projection_vector_store import MongoDBAtlasProjectionVectorStore
 from rag.projection_retriever import MongoDBAtlasProjectionRetriever
 from rag.prompt_template import PROMPT
@@ -33,7 +37,7 @@ class MyCustomHandler(BaseCallbackHandler):
 
 
 LLM = Ollama(
-    model="llama2", callback_manager=CallbackManager([MyCustomHandler()]))
+    model="phi3:3.8b", callback_manager=CallbackManager([MyCustomHandler()]))
 
 output_parser = StrOutputParser()
 
@@ -62,6 +66,8 @@ def vector_search_chain(custom_projection=None, k=4):
     chain = setup_and_retrieval
 
     return chain
+
+
 def rag_chain(custom_projection=None, k=4):
     collection = mongo_connection()
     vectorstore = MongoDBAtlasProjectionVectorStore(
@@ -77,3 +83,30 @@ def rag_chain(custom_projection=None, k=4):
     chain = setup_and_retrieval | PROMPT | LLM | output_parser
 
     return chain
+
+
+def self_querying_rag_chain():
+    collection = mongo_connection()
+    vectorstore = MongoDBAtlasVectorSearch(collection,
+    embedding_model, index_name=os.getenv("INDEX_NAME"), text_key="fullplot")
+
+    metadata_field_info = [
+        AttributeInfo(
+            name="year",
+            description="Not a Date, just the INTEGER represending year. The year the movie was released, represented as an integer",
+            type="integer",
+        ),
+        AttributeInfo(
+            name="rating", description="A 1-10 rating for the movie", type="integer"
+        ),
+    ]
+
+    document_content_description = "Brief summary of a movie"
+    retriever = SelfQueryRetriever.from_llm(
+        LLM,
+        vectorstore,
+        document_content_description,
+        metadata_field_info,
+    )
+
+    return retriever
