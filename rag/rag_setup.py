@@ -101,8 +101,8 @@ def rag_chain(custom_projection=None, k=4):
 
 def self_querying_vector_search_chain(custom_projection=None, k=4):
     collection = mongo_connection()
-    vectorstore = MongoDBAtlasProjectionVectorStore(collection, embedding_model,
-                                                    embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
+    vectorstore = MongoDBAtlasProjectionVectorStore(
+        collection, embedding_model, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
 
     document_content_description = "Brief summary of a movie"
     retriever = SelfQueryRetriever.from_llm(
@@ -117,5 +117,25 @@ def self_querying_vector_search_chain(custom_projection=None, k=4):
     return retriever
 
 
-def self_querying_rag_chain():
-    return True
+def self_querying_rag_chain(custom_projection=None, k=4):
+    collection = mongo_connection()
+    vectorstore = MongoDBAtlasProjectionVectorStore(
+        collection, embedding_model, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
+
+    document_content_description = "Brief summary of a movie"
+    retriever = SelfQueryRetriever.from_llm(
+        LLM,
+        vectorstore,
+        document_content_description,
+        METADATA_FIELD_INFO,
+        search_kwargs={
+            "custom_projection": custom_projection, "k": k}
+    )
+
+    setup_and_retrieval = RunnableParallel(
+        {"context": retriever, "question": RunnablePassthrough()}
+    )
+
+    chain = setup_and_retrieval | PROMPT | LLM | output_parser
+
+    return chain

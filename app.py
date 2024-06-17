@@ -80,7 +80,22 @@ def self_querying_vector_search():
 
 @app.route("/sq-rag")
 def self_querying_rag():
-    return self_querying_rag_chain()
+    query = request.args.get('query')
+    custom_projection = request.args.get('projection')
+    docs_num = int(request.args.get('docs_num')) if request.args.get('docs_num') else 3
+
+    if not custom_projection:
+        custom_projection = {'$project': {
+            '_id': 0,
+            os.getenv("EMBEDDING_KEY"): 0}}
+    else:
+        custom_projection = json.loads(custom_projection)
+
+    chain = self_querying_rag_chain(custom_projection, docs_num)
+
+    response = chain.invoke(query)
+
+    return jsonify(response)
 
 
 def docs_to_json(docs):
