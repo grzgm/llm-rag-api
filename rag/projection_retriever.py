@@ -21,7 +21,9 @@ class MongoDBAtlasProjectionRetriever(BaseRetriever):
     ) -> List[Document]:
         # docs = list(json.dumps(x) for x in self.movie_vectorstore.similarity_search_with_score(
         #     query, **self.search_kwargs))
-        docs = list(x for x in self.movie_vectorstore.similarity_search_with_score(query, **self.search_kwargs))
+        # docs = list(x for x in self.movie_vectorstore.similarity_search_with_score(query, **self.search_kwargs))
+        docs_and_similarities = self.movie_vectorstore.similarity_search_with_score(query, **self.search_kwargs)
+        docs = [doc for doc, _ in docs_and_similarities]
         # if self.search_type == "similarity":
         #     docs = self.vectorstore.similarity_search(
         #         query, **self.search_kwargs)

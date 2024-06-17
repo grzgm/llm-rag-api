@@ -2,7 +2,7 @@ import os
 import json
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
-from rag.rag_setup import vector_search_chain, rag_chain, self_querying_vector_search_chain
+from rag.rag_setup import vector_search_chain, rag_chain, self_querying_vector_search_chain, self_querying_rag_chain
 
 load_dotenv()
 
@@ -31,6 +31,8 @@ def vector_search():
     chain = vector_search_chain(custom_projection, docs_num)
 
     response = chain.invoke(query)
+
+    response["context"] = docs_to_json(response["context"])
 
     return jsonify(response)
 
@@ -62,9 +64,19 @@ def self_querying_vector_search():
 
     docs = chain.invoke(query)
 
-    res = []
-    for doc in docs:
-        doc.metadata.pop('_id', None)
-        res.append(doc.to_json())
+    res = docs_to_json(docs)
 
     return jsonify(res)
+
+
+@app.route("/sq-rag")
+def self_querying_rag():
+    return self_querying_rag_chain()
+
+
+def docs_to_json(docs):
+    json_docs = []
+    for doc in docs:
+        doc.metadata.pop('_id', None)
+        json_docs.append(doc.to_json())
+    return json_docs
