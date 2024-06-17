@@ -19,6 +19,8 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 from langchain_community.llms.ollama import Ollama
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain.chains.query_constructor.base import AttributeInfo
+from rag.projection_self_query_retriever import SelfQueryRetriever
 from rag.projection_vector_store import MongoDBAtlasProjectionVectorStore
 from rag.projection_retriever import MongoDBAtlasProjectionRetriever
 from rag.prompt_template import PROMPT
@@ -33,7 +35,23 @@ class MyCustomHandler(BaseCallbackHandler):
 
 
 LLM = Ollama(
-    model="llama2", callback_manager=CallbackManager([MyCustomHandler()]))
+    model="phi3:3.8b", callback_manager=CallbackManager([MyCustomHandler()]))
+
+METADATA_FIELD_INFO = [
+    AttributeInfo(
+        name="year",
+        description="Not a Date, just the INTEGER represending year. The year the movie was released, represented as an integer",
+        type="integer",
+    ),
+    AttributeInfo(
+        name="imdb.rating", description="A 1-10 rating for the movie", type="integer"
+    ),
+    AttributeInfo(
+        name="genres",
+        description="The genres of the movie. One of ['Science fiction', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Action', 'Animated']",
+        type="string",
+    ),
+]
 
 output_parser = StrOutputParser()
 
@@ -62,6 +80,8 @@ def vector_search_chain(custom_projection=None, k=4):
     chain = setup_and_retrieval
 
     return chain
+
+
 def rag_chain(custom_projection=None, k=4):
     collection = mongo_connection()
     vectorstore = MongoDBAtlasProjectionVectorStore(
@@ -69,6 +89,48 @@ def rag_chain(custom_projection=None, k=4):
 
     retriever = MongoDBAtlasProjectionRetriever(movie_vectorstore=vectorstore, search_kwargs={
         "custom_projection": custom_projection, "k": k})
+
+    setup_and_retrieval = RunnableParallel(
+        {"context": retriever, "question": RunnablePassthrough()}
+    )
+
+    chain = setup_and_retrieval | PROMPT | LLM | output_parser
+
+    return chain
+
+
+def self_querying_vector_search_chain(custom_projection=None, k=4):
+    collection = mongo_connection()
+    vectorstore = MongoDBAtlasProjectionVectorStore(
+        collection, embedding_model, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
+
+    document_content_description = "Brief summary of a movie"
+    retriever = SelfQueryRetriever.from_llm(
+        LLM,
+        vectorstore,
+        document_content_description,
+        METADATA_FIELD_INFO,
+        search_kwargs={
+            "custom_projection": custom_projection, "k": k}
+    )
+
+    return retriever
+
+
+def self_querying_rag_chain(custom_projection=None, k=4):
+    collection = mongo_connection()
+    vectorstore = MongoDBAtlasProjectionVectorStore(
+        collection, embedding_model, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
+
+    document_content_description = "Brief summary of a movie"
+    retriever = SelfQueryRetriever.from_llm(
+        LLM,
+        vectorstore,
+        document_content_description,
+        METADATA_FIELD_INFO,
+        search_kwargs={
+            "custom_projection": custom_projection, "k": k}
+    )
 
     setup_and_retrieval = RunnableParallel(
         {"context": retriever, "question": RunnablePassthrough()}

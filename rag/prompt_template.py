@@ -1,6 +1,6 @@
 """ Custom prompt template
 """
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 TEMPLATE = """Answer the question based only on the following context:
 {context}
@@ -8,4 +8,4 @@ TEMPLATE = """Answer the question based only on the following context:
 Question: {question}
 """
 
-PROMPT = ChatPromptTemplate.from_template(TEMPLATE)
+PROMPT = PromptTemplate.from_template(TEMPLATE)
