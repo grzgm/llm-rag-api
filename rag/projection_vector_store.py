@@ -73,7 +73,7 @@ class MongoDBAtlasProjectionVectorStore(MongoDBAtlasVectorSearch):
         for res in cursor:
             score = res.pop("score")
             text = str(res)
-            docs.append((Document(page_content=text, metadata=res), score))
+            docs.append((Document(page_content=text), score))
         return docs
 
     def similarity_search_with_score(
