@@ -38,6 +38,22 @@ class MyCustomHandler(BaseCallbackHandler):
 LLM = Ollama(
     model="phi3:3.8b", callback_manager=CallbackManager([MyCustomHandler()]))
 
+METADATA_FIELD_INFO = [
+    AttributeInfo(
+        name="year",
+        description="Not a Date, just the INTEGER represending year. The year the movie was released, represented as an integer",
+        type="integer",
+    ),
+    AttributeInfo(
+        name="imdb.rating", description="A 1-10 rating for the movie", type="integer"
+    ),
+    AttributeInfo(
+        name="genres",
+        description="The genres of the movie. One of ['Science fiction', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Action', 'Animated']",
+        type="string",
+    ),
+]
+
 output_parser = StrOutputParser()
 
 
@@ -89,28 +105,16 @@ def self_querying_vector_search_chain():
     vectorstore = MongoDBAtlasVectorSearch(collection,
                                            embedding_model, index_name=os.getenv("INDEX_NAME"), text_key="title")
 
-    metadata_field_info = [
-        AttributeInfo(
-            name="year",
-            description="Not a Date, just the INTEGER represending year. The year the movie was released, represented as an integer",
-            type="integer",
-        ),
-        AttributeInfo(
-            name="imdb.rating", description="A 1-10 rating for the movie", type="integer"
-        ),
-        AttributeInfo(
-            name="genres",
-            description="The genres of the movie. One of ['Science fiction', 'Comedy', 'Drama', 'Thriller', 'Romance', 'Action', 'Animated']",
-            type="string",
-        ),
-    ]
-
     document_content_description = "Brief summary of a movie"
     retriever = SelfQueryRetriever.from_llm(
         LLM,
         vectorstore,
         document_content_description,
-        metadata_field_info
+        METADATA_FIELD_INFO
     )
 
     return retriever
+
+
+def self_querying_rag_chain():
+    return True
