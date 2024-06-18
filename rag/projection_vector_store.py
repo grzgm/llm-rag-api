@@ -1,4 +1,4 @@
-""" Custom MovieVectorStore based on MongoDBAtlasVectorSearch
+""" Custom MongoDBAtlasProjectionVectorStore based on MongoDBAtlasVectorSearch
 """
 from typing import (
     Any,
@@ -9,8 +9,6 @@ from typing import (
     TypeVar,
 )
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
-from pymongo.collection import Collection
-from langchain_core.embeddings import Embeddings
 from langchain_core.documents import Document
 
 MongoDBDocumentType = TypeVar("MongoDBDocumentType", bound=Dict[str, Any])

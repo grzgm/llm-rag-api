@@ -1,7 +1,11 @@
 import os
 import json
+import langchain_core.exceptions
+import lark.exceptions
+import pymongo.errors
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
+from langchain_core.documents import Document
 from rag.rag_setup import vector_search_chain, rag_chain, self_querying_vector_search_chain, self_querying_rag_chain
 
 load_dotenv()
@@ -12,11 +16,6 @@ app = Flask(__name__)
 @app.route("/")
 def hello_world():
     return "<p>Hello, World! </p>"
-
-
-@app.route("/api")
-def api_key():
-    return f"API KEY: ${os.getenv("API_KEY")}"
 
 
 @app.route("/vector-search")
@@ -30,11 +29,15 @@ def vector_search():
 
     chain = vector_search_chain(custom_projection, docs_num)
 
-    response = chain.invoke(query)
+    try:
+        docs = chain.invoke(query)
+    except Exception as e:
+        print("An error occurred:", e)
+        return "There was an unknown problem"
 
-    response["context"] = docs_to_json(response["context"])
+    docs = docs_to_json(docs)
 
-    return jsonify(response)
+    return jsonify(docs)
 
 
 @app.route("/rag")
@@ -52,9 +55,14 @@ def rag():
 
     chain = rag_chain(custom_projection, docs_num)
 
-    response = chain.invoke(query)
+    try:
+        response = chain.invoke(query)
+    except Exception as e:
+        print("An error occurred:", e)
+        return "There was an unknown problem"
 
     return jsonify(response)
+
 
 @app.route("/sq-vector-search")
 def self_querying_vector_search():
@@ -71,11 +79,24 @@ def self_querying_vector_search():
 
     chain = self_querying_vector_search_chain(custom_projection, docs_num)
 
-    docs = chain.invoke(query)
+    try:
+        docs = chain.invoke(query)
+    except langchain_core.exceptions.OutputParserException as e:
+        print("An error occurred:", e)
+        return "There was a problem with parsing filters"
+    except lark.exceptions.UnexpectedToken as e:
+        print("An error occurred:", e)
+        return "There was a problem with parsing filters"
+    except pymongo.errors.OperationFailure as e:
+        print("An error occurred:", e)
+        return "There was a problem with filters in MongoDB"
+    except Exception as e:
+        print("An error occurred:", e)
+        return "There was an unknown problem"
 
-    res = docs_to_json(docs)
+    docs = docs_to_json(docs)
 
-    return jsonify(res)
+    return jsonify(docs)
 
 
 @app.route("/sq-rag")
@@ -93,12 +114,32 @@ def self_querying_rag():
 
     chain = self_querying_rag_chain(custom_projection, docs_num)
 
-    response = chain.invoke(query)
+    try:
+        response = chain.invoke(query)
+    except langchain_core.exceptions.OutputParserException as e:
+        print("An error occurred:", e)
+        return "There was a problem with parsing filters"
+    except lark.exceptions.UnexpectedToken as e:
+        print("An error occurred:", e)
+        return "There was a problem with parsing filters"
+    except pymongo.errors.OperationFailure as e:
+        print("An error occurred:", e)
+        return "There was a problem with filters in MongoDB"
+    except Exception as e:
+        print("An error occurred:", e)
+        return "There was an unknown problem"
 
     return jsonify(response)
 
 
-def docs_to_json(docs):
+def docs_to_json(docs: list[Document]) -> list:
+    """Convert Documents to JSON format.
+
+    Removes '_id' field for proper JSON conversion.
+
+    Returns:
+        List of Documents converted to JSON format.
+    """
     json_docs = []
     for doc in docs:
         doc.metadata.pop('_id', None)
