@@ -21,11 +21,15 @@ def hello_world():
 @app.route("/vector-search")
 def vector_search():
     query = request.args.get('query')
+    custom_projection = request.args.get('projection')
     docs_num = int(request.args.get('docs_num')) if request.args.get('docs_num') else 3
 
-    custom_projection = {'$project': {
-        '_id': 0,
-        os.getenv("EMBEDDING_KEY"): 0}}
+    if not custom_projection:
+        custom_projection = {'$project': {
+            '_id': 0,
+            os.getenv("EMBEDDING_KEY"): 0}}
+    else:
+        custom_projection = json.loads(custom_projection)
 
     chain = vector_search_chain(custom_projection, docs_num)
 
