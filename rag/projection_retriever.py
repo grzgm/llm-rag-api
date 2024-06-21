@@ -1,4 +1,4 @@
-""" Custom MovieRetriever based on BaseRetriever
+""" Custom MongoDBAtlasProjectionRetriever based on BaseRetriever
 """
 from typing import List
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
