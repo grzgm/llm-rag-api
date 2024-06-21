@@ -21,8 +21,10 @@ CLIENT = MongoClient(os.getenv("MONGO_URI"))
 EMBEDDING_MODEL = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-LLM = Ollama(
-    model="phi3:3.8b")
+LLM = Ollama(model="phi3:3.8b")
+
+# LLM model with enabled feature to format response into JSON object
+JSON_LLM = Ollama(model="phi3:3.8b", format="json")
 
 # Document content description for self query vector search
 DOCUMENT_CONTENT_DESCRIPTION = os.getenv("DOCUMENT_CONTENT_DESCRIPTION")
@@ -133,7 +135,7 @@ def self_querying_vector_search_chain(custom_projection: Optional[Dict] = None, 
 
     document_content_description = "Brief summary of a movie"
     retriever = SelfQueryRetriever.from_llm(
-        LLM,
+        JSON_LLM,
         vectorstore,
         document_content_description,
         METADATA_FIELD_INFO,
@@ -163,7 +165,7 @@ def self_querying_rag_chain(custom_projection: Optional[Dict] = None, k: int = 4
         collection, EMBEDDING_MODEL, embedding_key=os.getenv("EMBEDDING_KEY"), index_name=os.getenv("INDEX_NAME"))
 
     retriever = SelfQueryRetriever.from_llm(
-        LLM,
+        JSON_LLM,
         vectorstore,
         DOCUMENT_CONTENT_DESCRIPTION,
         METADATA_FIELD_INFO,
