@@ -12,7 +12,6 @@ This project is a Flask-based application providing multiple endpoints for perfo
   - [Self-Querying Vector Search](#self-querying-vector-search)
   - [Self-Querying RAG](#self-querying-rag)
 - [Usage](#usage)
-- [License](#license)
 
 ## Installation
 
